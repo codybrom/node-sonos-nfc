@@ -11,7 +11,8 @@
     "prepare": "husky install",
     "format": "prettier --write . && git add -A ."
   },
-  "author": "Ryan Olf",
+  "author": "Cody Bromley",
+  "contributors": ["Ryan Olf"],
   "license": "MIT",
   "dependencies": {
     "concurrently": "^8.2.2",
