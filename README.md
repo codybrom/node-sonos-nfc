@@ -1,8 +1,6 @@
-[![Node.js CI](https://github.com/ryanolf/node-sonos-nfc/actions/workflows/node.js.yml/badge.svg)](https://github.com/ryanolf/node-sonos-nfc/actions/workflows/node.js.yml)
+[![Node.js CI](https://github.com/codybrom/node-sonos-nfc/actions/workflows/node.js.yml/badge.svg)](https://github.com/codybrom/node-sonos-nfc/actions/workflows/node.js.yml)
 
 # Background
-
-I wanted a way for my pre-smartphone daughter to select and play music in our house. There are companies that build purpose-built players for kids that utilize cards to control what they play, but they're expensive and represent another _thing_ that we have to keep around. We already pay a monthly fee to stream pretty much anything -- why pay more? Why get another crappy speaker?
 
 Snooping around, I found [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), which does exactly what I want. Put a pre-programmed card (or anything else you can stick a NFC NTAG sticker on) near a cheap NFC card reader, and voilà, your chosen music plays from Apple Music or Spotify. Cards can also be programmed with commands, like skip track, adjust volume, turn on shuffle, etc, and are portable between rooms (if you care to setup multiple Vinyl Emulators). I imagined that making the cards themselves could be a fun activity, and with NTAG213 stickers <$15 for 50, we could make a bunch. There is also a nice aesthetic to controlling your streaming service with physical media -- the impetus behind Vinyl Emulator in the first place.
 
