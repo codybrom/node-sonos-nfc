@@ -80,17 +80,26 @@ export async function startReader(onTag: (text: string) => Promise<void> | void)
     currentState = newState;
 
     if (isPresent && !wasPresent) {
-      try {
-        await delay(20); // connect almost immediately; retry handles power-up
-        const text = await readTag(ctx, readerName);
-        if (text) {
-          console.log('Read from NFC tag with message: ', text);
-          await onTag(text);
-        } else {
-          console.log('Could not parse anything from this tag.');
+      // Retry the whole read a few times — a card can power up slowly or shift
+      // mid-read, and we'd rather not drop the tap on a single flaky attempt.
+      let text: string | null = null;
+      for (let attempt = 0; attempt < 3 && text === null; attempt++) {
+        try {
+          await delay(attempt === 0 ? 20 : 120);
+          text = await readTag(ctx, readerName);
+        } catch (err) {
+          if (attempt === 2) console.error((err as Error).toString());
         }
-      } catch (err) {
-        console.error((err as Error).toString());
+      }
+      if (text) {
+        console.log('Read from NFC tag with message: ', text);
+        try {
+          await onTag(text);
+        } catch (err) {
+          console.error((err as Error).toString());
+        }
+      } else {
+        console.log('Could not parse anything from this tag.');
       }
     } else if (!isPresent && wasPresent) {
       console.log('Card removed');
