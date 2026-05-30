@@ -1,16 +1,13 @@
 {
-  "name": "sonos-nfc",
-  "version": "0.1.2",
-  "description": "Use NFC tags to control Sonos - a node app inspired by and compatible with hankhank10/vinylemulator, with better NFC reader compatibility",
+  "name": "tapdeck",
+  "version": "0.2.0",
+  "description": "Tap an NFC tag to play Spotify, favorites, or playlists on Sonos. A zero-dependency Node app that talks to Sonos directly over the LAN.",
   "main": "sonos_nfc.js",
   "type": "module",
   "scripts": {
-    "preinstall": "node -e \"if (+process.versions.node.split('.')[0] < 24) { console.error('\\n\\u001b[31mThis project requires Node 24+. You are running ' + process.version + '.\\u001b[0m\\n'); process.exit(1); }\"",
-    "test": "jest",
-    "start-all": "concurrently --kill-others \"npm start\" \"npm explore sonos-http-api -- npm start\"",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "start": "node index.js",
-    "prepare": "husky",
-    "format": "prettier --write . && git add -A ."
+    "format": "prettier --write ."
   },
   "author": "Cody Bromley",
   "contributors": [
@@ -21,29 +18,11 @@
     "node": ">=24"
   },
   "dependencies": {
-    "concurrently": "^10.0.0",
     "nfc-pcsc": "^0.8.1",
-    "nfccard-tool": "^0.1.1",
-    "node-fetch": "^3.3.2",
-    "sonos-http-api": "jishi/node-sonos-http-api"
-  },
-  "overrides": {
-    "nan": "^2.22.0",
-    "minimist": "^1.2.8",
-    "json5": "^2.2.3",
-    "request": {
-      "form-data": "^2.5.5",
-      "qs": "^6.14.1"
-    }
+    "nfccard-tool": "^0.1.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/preset-env": "^7.29.7",
-    "babel-jest": "^30.4.1",
-    "babel-plugin-transform-amd-to-commonjs": "^1.6.0",
-    "husky": "^9.1.7",
     "jest": "^30.4.2",
-    "jest-fetch-mock": "^3.0.3",
     "prettier": "^3.8.3"
   }
 }
