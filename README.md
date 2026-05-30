@@ -78,7 +78,7 @@ $ npm install
 
 This app talks to your Sonos players **directly over the local network** (UPnP/SOAP) using a small, dependency-free engine built into the project — there's no separate API server to run and no Spotify/Apple credentials to configure. It just needs to be on the same LAN as your speakers (UDP multicast is used to discover them).
 
-Copy `usersettings.json.example` to `usersettings.json` and set `sonos_room` to the room you want to control. If multicast discovery is blocked on your network, set `sonos_seed_ip` to the IP of any one Sonos player to skip discovery.
+Copy `usersettings.json.example` to `usersettings.json` and set `sonos_room` to the room you want to control. If multicast discovery is blocked on your network, set `sonos_seed_ip` to the IP of any one Sonos player to skip discovery. `min_volume` (default 10) raises a near-muted speaker (volume < 5) to an audible level when a music card is scanned, so a tap never plays silently.
 
 **Supported tags:** `spotify:` (track/album/playlist), `favorite:<name>` and `playlist:<name>` (anything saved in your Sonos app — works for any service), `command:<x>` (raw transport: `play`, `pause`, `next`, `previous`, `volume/40`, `volume/+5`, `repeat/all`, `shuffle/on`, `crossfade/off`, `mute`, `clearqueue`), and `room:<name>` to switch rooms. Other music services (Apple/Amazon/TuneIn/BBC) are not built in — use a Sonos favorite instead.
 

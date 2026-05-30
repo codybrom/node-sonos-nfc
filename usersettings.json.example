@@ -3,5 +3,6 @@
   "sonos_seed_ip": "",
   "reset_repeat": true,
   "reset_shuffle": true,
-  "reset_crossfade": true
+  "reset_crossfade": true,
+  "min_volume": 10
 }
