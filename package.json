@@ -7,7 +7,6 @@
   "scripts": {
     "preinstall": "node -e \"if (+process.versions.node.split('.')[0] < 24) { console.error('\\n\\u001b[31mThis project requires Node 24+. You are running ' + process.version + '.\\u001b[0m\\n'); process.exit(1); }\"",
     "test": "jest",
-    "start-all": "concurrently --kill-others \"npm start\" \"npm explore sonos-http-api -- npm start\"",
     "start": "node index.js",
     "prepare": "husky",
     "format": "prettier --write . && git add -A ."
@@ -21,20 +20,11 @@
     "node": ">=24"
   },
   "dependencies": {
-    "concurrently": "^10.0.0",
     "nfc-pcsc": "^0.8.1",
-    "nfccard-tool": "^0.1.1",
-    "node-fetch": "^3.3.2",
-    "sonos-http-api": "jishi/node-sonos-http-api"
+    "nfccard-tool": "^0.1.1"
   },
   "overrides": {
-    "nan": "^2.22.0",
-    "minimist": "^1.2.8",
-    "json5": "^2.2.3",
-    "request": {
-      "form-data": "^2.5.5",
-      "qs": "^6.14.1"
-    }
+    "nan": "^2.22.0"
   },
   "devDependencies": {
     "@babel/core": "^7.29.7",
@@ -43,7 +33,6 @@
     "babel-plugin-transform-amd-to-commonjs": "^1.6.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
-    "jest-fetch-mock": "^3.0.3",
     "prettier": "^3.8.3"
   }
 }

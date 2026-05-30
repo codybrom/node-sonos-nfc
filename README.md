@@ -62,7 +62,7 @@ Install git and clone this repo. In Ubuntu/Debian/Raspberry Pi OS,
 
 ```
 $ sudo apt install git
-$ git clone https://github.com/ryanolf/node-sonos-nfc.git
+$ git clone https://github.com/codybrom/node-sonos-nfc.git
 ```
 
 Install dependencies via `npm`. If you're following along in Ubuntu/Debian/Raspberry Pi OS, the commands are
@@ -72,9 +72,11 @@ $ cd node-sonos-nfc
 $ npm install
 ```
 
-For simplicity, [sonos-http-api](https://github.com/jishi/node-sonos-http-api), needed for this program to work, is included as a dependency, though you don't need to use it if you already have an http api running elsewhere.
+This app talks to your Sonos players **directly over the local network** (UPnP/SOAP) using a small, dependency-free engine built into the project — there's no separate API server to run and no Spotify/Apple credentials to configure. It just needs to be on the same LAN as your speakers (UDP multicast is used to discover them).
 
-If you _DO_ want to use the included Sonos HTTP API, you'll need to configure it. Rename the `usersettings.json.example` to `usersettings.json` and edit it to your liking. You'll need to set the `spotify` and/or `apple` sections to your credentials. You can also set the `http` section to your liking. The defaults should work fine for most people.
+Copy `usersettings.json.example` to `usersettings.json` and set `sonos_room` to the room you want to control. If multicast discovery is blocked on your network, set `sonos_seed_ip` to the IP of any one Sonos player to skip discovery.
+
+**Supported tags:** `spotify:` (track/album/playlist), `favorite:<name>` and `playlist:<name>` (anything saved in your Sonos app — works for any service), `command:<x>` (raw transport: `play`, `pause`, `next`, `previous`, `volume/40`, `volume/+5`, `repeat/all`, `shuffle/on`, `crossfade/off`, `mute`, `clearqueue`), and `room:<name>` to switch rooms. Other music services (Apple/Amazon/TuneIn/BBC) are not built in — use a Sonos favorite instead.
 
 ## Run all the time
 
@@ -85,10 +87,10 @@ running, install pm2 globally:
 $ sudo npm install -g pm2
 ```
 
-and spin-up sonos_nfc and sonos-http-api:
+and spin-up sonos_nfc:
 
 ```
-$ pm2 start npm -- run start-all
+$ pm2 start npm -- start
 ```
 
 Then, to configure your system to run the startup, follow the instructions given when you run
@@ -101,12 +103,6 @@ e.g.
 
 ```
 $ sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u pi --hp /home/pi
-```
-
-If you already have the http API running elsewhere, you can direct this program to that server via the `usersettings.json` (rename it from .example and update to how you would like to use) and instead run just this program via `npm start`, so replace the `pm2 start` command above with
-
-```
-$ pm2 start npm -- start
 ```
 
 ## Debug
