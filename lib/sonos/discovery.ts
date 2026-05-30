@@ -1,7 +1,7 @@
-// SSDP discovery of any Sonos ZonePlayer on the LAN, using native UDP (dgram).
-// We only need ONE reachable player to bootstrap; topology (all rooms/groups) is
-// then fetched from it via SOAP. Multicast must reach the player, so this is
-// expected to run on the same L2 network as the speakers (e.g. the Pi).
+// SSDP discovery of any Sonos ZonePlayer on the LAN, using node:dgram (which
+// Deno supports). We only need ONE reachable player to bootstrap; topology
+// (all rooms/groups) is then fetched from it via SOAP. Multicast must reach the
+// player, so this is expected to run on the same L2 network as the speakers.
 
 import dgram from 'node:dgram';
 
@@ -18,17 +18,19 @@ const M_SEARCH = Buffer.from(
     `ST: ${TARGET}`,
     '',
     '',
-  ].join('\r\n')
+  ].join('\r\n'),
 );
 
 // Resolve to { ip } of the first ZonePlayer that answers, or reject on timeout.
-export function discoverAnyPlayer({ timeout = 5000 } = {}) {
+export function discoverAnyPlayer({ timeout = 5000 }: { timeout?: number } = {}): Promise<
+  { ip: string }
+> {
   return new Promise((resolve, reject) => {
     const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
     let done = false;
-    let retryTimer;
+    let retryTimer: ReturnType<typeof setInterval>;
 
-    const finish = (err, ip) => {
+    const finish = (err: Error | null, ip?: string) => {
       if (done) return;
       done = true;
       clearInterval(retryTimer);
@@ -36,9 +38,10 @@ export function discoverAnyPlayer({ timeout = 5000 } = {}) {
       try {
         socket.close();
       } catch {
-        /* already closed */
+        // already closed
       }
-      err ? reject(err) : resolve({ ip });
+      if (err) reject(err);
+      else resolve({ ip: ip! });
     };
 
     socket.on('error', (err) => finish(err));
@@ -55,7 +58,7 @@ export function discoverAnyPlayer({ timeout = 5000 } = {}) {
         socket.setBroadcast(true);
         socket.setMulticastTTL(2);
       } catch {
-        /* some platforms restrict these; multicast send still works */
+        // some platforms restrict these; multicast send still works
       }
       const send = () => {
         if (!done) socket.send(M_SEARCH, 0, M_SEARCH.length, SSDP_PORT, SSDP_ADDR);
@@ -66,7 +69,7 @@ export function discoverAnyPlayer({ timeout = 5000 } = {}) {
 
     const deadline = setTimeout(
       () => finish(new Error(`No Sonos ZonePlayer found within ${timeout}ms (SSDP)`)),
-      timeout
+      timeout,
     );
   });
 }

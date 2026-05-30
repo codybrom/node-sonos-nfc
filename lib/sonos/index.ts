@@ -2,14 +2,14 @@
 // The engine (discovery + topology) is built once and cached for the process;
 // the first NFC tap pays the discovery cost, later taps reuse it.
 
-import { SonosSystem } from './system.js';
-import * as spotify from './services/spotify.js';
+import { SonosSystem } from './system.ts';
+import * as spotify from './services/spotify.ts';
 
-let enginePromise = null;
+let enginePromise: Promise<SonosSystem> | null = null;
 
 // Returns the cached SonosSystem, bootstrapping (discover + topology) on first call.
 // `opts.seedIp` skips SSDP discovery and talks to a known player directly.
-export function getEngine(opts = {}) {
+export function getEngine(opts: { seedIp?: string } = {}): Promise<SonosSystem> {
   if (!enginePromise) {
     enginePromise = new SonosSystem(opts).bootstrap().catch((err) => {
       enginePromise = null; // allow retry on next tap
@@ -20,8 +20,8 @@ export function getEngine(opts = {}) {
 }
 
 // Test/util hook to drop the cached engine.
-export function resetEngine() {
+export function resetEngine(): void {
   enginePromise = null;
 }
 
-export { spotify, SonosSystem };
+export { SonosSystem, spotify };

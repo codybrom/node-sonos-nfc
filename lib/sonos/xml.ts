@@ -5,7 +5,7 @@
 
 // Encode a string for safe inclusion in XML text/attributes.
 // Order matters: `&` must be escaped first or it would double-escape the others.
-export function encodeEntities(str) {
+export function encodeEntities(str: string): string {
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -17,7 +17,7 @@ export function encodeEntities(str) {
 // Decode XML entities, including numeric forms. Sonos sometimes double-encodes
 // nested DIDL (e.g. a Browse <Result>, or a favorite's <r:resMD>), so callers
 // may need to run this twice.
-export function decodeEntities(str) {
+export function decodeEntities(str: string): string {
   return String(str)
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
@@ -31,24 +31,24 @@ export function decodeEntities(str) {
 
 // Return the text content of the first <tag>...</tag> (tag may be namespaced,
 // e.g. "dc:title" or "r:resMD"). Returns undefined if absent.
-export function getTagText(xml, tag) {
+export function getTagText(xml: string, tag: string): string | undefined {
   const m = new RegExp(`<${escapeTag(tag)}\\b[^>]*>([\\s\\S]*?)</${escapeTag(tag)}>`).exec(xml);
   return m ? m[1] : undefined;
 }
 
 // Return an array of full <tag ...>...</tag> blocks (including self-closing).
-export function getTagBlocks(xml, tag) {
+export function getTagBlocks(xml: string, tag: string): string[] {
   const t = escapeTag(tag);
   const re = new RegExp(`<${t}\\b[^>]*?/>|<${t}\\b[^>]*>[\\s\\S]*?</${t}>`, 'g');
   return xml.match(re) || [];
 }
 
 // Return the value of attr="..." from a single opening tag string.
-export function getAttr(tagStr, attr) {
+export function getAttr(tagStr: string, attr: string): string | undefined {
   const m = new RegExp(`\\b${attr}="([^"]*)"`).exec(tagStr);
   return m ? m[1] : undefined;
 }
 
-function escapeTag(tag) {
+function escapeTag(tag: string): string {
   return tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
