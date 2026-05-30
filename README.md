@@ -3,8 +3,9 @@
 # tapdeck
 
 Tap an NFC tag to play Spotify, a Sonos favorite, or a playlist on your Sonos — like dropping a
-record on a deck. A small, **zero-dependency** Node app that talks to Sonos **directly over your
-LAN** (UPnP/SOAP): no separate API server, no cloud, no credentials.
+record on a deck. A small, **zero-dependency TypeScript app on [Deno](https://deno.com)** that reads
+your NFC reader via FFI and talks to Sonos **directly over your LAN** (UPnP/SOAP): no separate API
+server, no cloud, no credentials, no native addons.
 
 # Background
 
@@ -75,10 +76,6 @@ compile — just the runtime library):
 
 ```
 $ sudo apt install libpcsclite1 pcscd
-```
-
-```
-$ sudo apt install libpcsclite1 libpcsclite-dev pcscd
 ```
 
 If you're running a version of Linux, your computer may try to use the nfc kernel module to talk to
