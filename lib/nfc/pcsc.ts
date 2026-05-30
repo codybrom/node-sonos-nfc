@@ -54,10 +54,26 @@ const RS_EVENT = 24;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-function check(rv: number, op: string): void {
-  if (rv !== S_SUCCESS) {
-    throw new Error(`${op} failed: 0x${(rv >>> 0).toString(16)}`);
+export class PcscError extends Error {
+  readonly code: number;
+  constructor(op: string, rv: number) {
+    super(`${op} failed: 0x${(rv >>> 0).toString(16)}`);
+    this.code = rv >>> 0;
   }
+}
+
+// A card that just landed passes through these transient states while pcscd
+// powers it up — worth retrying. Anything else (e.g. NO_SMARTCARD/REMOVED) means
+// the card is gone.
+export const POWERING_UP = new Set([
+  0x8010000b, // SCARD_E_NOT_READY
+  0x80100066, // SCARD_W_UNRESPONSIVE_CARD
+  0x80100067, // SCARD_W_UNPOWERED_CARD
+  0x80100068, // SCARD_W_RESET_CARD
+]);
+
+function check(rv: number, op: string): void {
+  if (rv !== S_SUCCESS) throw new PcscError(op, rv);
 }
 
 // Deno FFI 'buffer' params want Uint8Array backed by a plain ArrayBuffer.

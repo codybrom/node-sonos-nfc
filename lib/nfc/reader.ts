@@ -10,16 +10,19 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Connect, retrying through the transient unpowered/unresponsive states that
 // a card passes through for a moment right after it lands on the reader.
 async function connectWithRetry(ctx: bigint, readerName: string): Promise<pcsc.Card> {
-  let last: unknown;
-  for (let i = 0; i < 20; i++) {
+  for (let i = 0; i < 25; i++) {
     try {
       return await pcsc.connect(ctx, readerName);
     } catch (err) {
-      last = err;
-      await delay(100);
+      // Retry only while the card is still powering up; bail if it's gone.
+      if (err instanceof pcsc.PcscError && pcsc.POWERING_UP.has(err.code)) {
+        await delay(80);
+        continue;
+      }
+      throw err;
     }
   }
-  throw last;
+  throw new Error('card did not power up in time');
 }
 
 // Read the NTAG user memory (from page 4) via FF B0 read APDUs until we have a
@@ -78,7 +81,7 @@ export async function startReader(onTag: (text: string) => Promise<void> | void)
 
     if (isPresent && !wasPresent) {
       try {
-        await delay(300); // let the card settle/power up before connecting
+        await delay(20); // connect almost immediately; retry handles power-up
         const text = await readTag(ctx, readerName);
         if (text) {
           console.log('Read from NFC tag with message: ', text);
