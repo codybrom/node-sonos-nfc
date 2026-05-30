@@ -5,6 +5,7 @@
   "main": "sonos_nfc.js",
   "type": "module",
   "scripts": {
+    "preinstall": "node -e \"if (+process.versions.node.split('.')[0] < 24) { console.error('\\n\\u001b[31mThis project requires Node 24+. You are running ' + process.version + '.\\u001b[0m\\n'); process.exit(1); }\"",
     "test": "jest",
     "start-all": "concurrently --kill-others \"npm start\" \"npm explore sonos-http-api -- npm start\"",
     "start": "node index.js",
@@ -15,7 +16,7 @@
   "contributors": ["Ryan Olf"],
   "license": "MIT",
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "dependencies": {
     "concurrently": "^8.2.2",
