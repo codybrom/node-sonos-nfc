@@ -5,11 +5,9 @@
   "main": "sonos_nfc.js",
   "type": "module",
   "scripts": {
-    "preinstall": "node -e \"if (+process.versions.node.split('.')[0] < 24) { console.error('\\n\\u001b[31mThis project requires Node 24+. You are running ' + process.version + '.\\u001b[0m\\n'); process.exit(1); }\"",
     "test": "jest",
     "start": "node index.js",
-    "prepare": "husky",
-    "format": "prettier --write . && git add -A ."
+    "format": "prettier --write ."
   },
   "author": "Cody Bromley",
   "contributors": [
@@ -27,7 +25,6 @@
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",
     "babel-jest": "^30.4.1",
-    "husky": "^9.1.7",
     "jest": "^30.4.2",
     "prettier": "^3.8.3"
   }
