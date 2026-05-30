@@ -27,7 +27,6 @@
   },
   "overrides": {
     "nan": "^2.22.0",
-    "lodash": "4.17.21",
     "minimist": "^1.2.8",
     "json5": "^2.2.3",
     "request": {
