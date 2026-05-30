@@ -10,13 +10,13 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 // Connect, retrying through the transient unpowered/unresponsive states that
 // a card passes through for a moment right after it lands on the reader.
 async function connectWithRetry(ctx: bigint, readerName: string): Promise<pcsc.Card> {
-  for (let i = 0; i < 25; i++) {
+  for (let i = 0; i < 60; i++) { // ~3.6s of power-up tolerance
     try {
       return await pcsc.connect(ctx, readerName);
     } catch (err) {
       // Retry only while the card is still powering up; bail if it's gone.
       if (err instanceof pcsc.PcscError && pcsc.POWERING_UP.has(err.code)) {
-        await delay(80);
+        await delay(60);
         continue;
       }
       throw err;
