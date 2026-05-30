@@ -5,7 +5,7 @@
   "main": "sonos_nfc.js",
   "type": "module",
   "scripts": {
-    "test": "jest",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "start": "node index.js",
     "format": "prettier --write ."
   },
@@ -22,9 +22,6 @@
     "nfccard-tool": "^0.1.1"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.7",
-    "@babel/preset-env": "^7.29.7",
-    "babel-jest": "^30.4.1",
     "jest": "^30.4.2",
     "prettier": "^3.8.3"
   }
