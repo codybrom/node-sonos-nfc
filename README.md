@@ -52,7 +52,7 @@ Install node and npm, e.g. download or follow the [official instructions](https:
 so that you can run this code. On Ubuntu/Debian/Raspberry Pi OS, I do this:
 
 ```
-$ curl -sL https://deb.nodesource.com/setup_15.x | sudo -E bash -
+$ curl -sL https://deb.nodesource.com/setup_24.x | sudo -E bash -
 $ sudo apt-get install -y nodejs
 ```
 
