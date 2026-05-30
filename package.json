@@ -14,6 +14,9 @@
   "author": "Cody Bromley",
   "contributors": ["Ryan Olf"],
   "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "concurrently": "^8.2.2",
     "nfc-pcsc": "^0.8.1",
