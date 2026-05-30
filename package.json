@@ -1,7 +1,7 @@
 {
-  "name": "sonos-nfc",
-  "version": "0.1.2",
-  "description": "Use NFC tags to control Sonos - a node app inspired by and compatible with hankhank10/vinylemulator, with better NFC reader compatibility",
+  "name": "tapdeck",
+  "version": "0.2.0",
+  "description": "Tap an NFC tag to play Spotify, favorites, or playlists on Sonos. A zero-dependency Node app that talks to Sonos directly over the LAN.",
   "main": "sonos_nfc.js",
   "type": "module",
   "scripts": {
@@ -23,14 +23,10 @@
     "nfc-pcsc": "^0.8.1",
     "nfccard-tool": "^0.1.1"
   },
-  "overrides": {
-    "nan": "^2.22.0"
-  },
   "devDependencies": {
     "@babel/core": "^7.29.7",
     "@babel/preset-env": "^7.29.7",
     "babel-jest": "^30.4.1",
-    "babel-plugin-transform-amd-to-commonjs": "^1.6.0",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "prettier": "^3.8.3"

@@ -1,4 +1,8 @@
-[![Node.js CI](https://github.com/codybrom/node-sonos-nfc/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/codybrom/node-sonos-nfc/actions/workflows/node.js.yml)
+[![Node.js CI](https://github.com/codybrom/tapdeck/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/codybrom/tapdeck/actions/workflows/node.js.yml)
+
+# tapdeck
+
+Tap an NFC tag to play Spotify, a Sonos favorite, or a playlist on your Sonos — like dropping a record on a deck. A small, **zero-dependency** Node app that talks to Sonos **directly over your LAN** (UPnP/SOAP): no separate API server, no cloud, no credentials.
 
 # Background
 
@@ -62,13 +66,13 @@ Install git and clone this repo. In Ubuntu/Debian/Raspberry Pi OS,
 
 ```
 $ sudo apt install git
-$ git clone https://github.com/codybrom/node-sonos-nfc.git
+$ git clone https://github.com/codybrom/tapdeck.git
 ```
 
 Install dependencies via `npm`. If you're following along in Ubuntu/Debian/Raspberry Pi OS, the commands are
 
 ```
-$ cd node-sonos-nfc
+$ cd tapdeck
 $ npm install
 ```
 
@@ -80,17 +84,17 @@ Copy `usersettings.json.example` to `usersettings.json` and set `sonos_room` to 
 
 ## Run all the time
 
-To run continuously and at boot, you'll want to run under some supervisor program. There are lots of options, like systemd (built-in already), supervisord, and pm2. I have found pm2, recommended by the author of Vinyl Emulator, to be very easy to use. To have pm2 spin-up sonos_nfc at boot and keep it
+To run continuously and at boot, you'll want to run under some supervisor program. There are lots of options, like systemd (built-in already), supervisord, and pm2. I have found pm2, recommended by the author of Vinyl Emulator, to be very easy to use. To have pm2 spin-up tapdeck at boot and keep it
 running, install pm2 globally:
 
 ```
 $ sudo npm install -g pm2
 ```
 
-and spin-up sonos_nfc:
+and spin-up tapdeck:
 
 ```
-$ pm2 start npm -- start
+$ pm2 start npm --name tapdeck -- start
 ```
 
 Then, to configure your system to run the startup, follow the instructions given when you run
