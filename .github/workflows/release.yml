@@ -1,0 +1,31 @@
+name: Release
+
+# Builds the self-contained binaries and publishes them on the GitHub release
+# whenever a version tag is pushed (e.g. v1.0.0).
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - name: Compile binaries
+        run: |
+          flags="--allow-ffi --allow-net --allow-read --allow-env=PCSC_LIB"
+          deno compile --target aarch64-unknown-linux-gnu $flags -o tapdeck-linux-arm64 index.ts
+          deno compile --target x86_64-unknown-linux-gnu $flags -o tapdeck-linux-x86_64 index.ts
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            tapdeck-linux-arm64
+            tapdeck-linux-x86_64
