@@ -33,7 +33,7 @@ API. The original tap-a-card-to-play idea comes from
 ## You need a computer
 
 The basic setup here involves a PC/SC card reader attached to a computer on the same network as your
-Sonos. The computer could be any computer that runs Node.js (so, any computer) and has drivers
+Sonos. The computer could be any computer that runs Deno (so, any computer) and has drivers
 available for your card reader (depends on the card reader). If you have the ACR122U, you can use
 pretty much any computer with USB and networking capability. A popular option if you don't want to
 hook up to an existing computer is to purchase a Raspberry Pi. I _think_ pretty much any model will
@@ -45,9 +45,9 @@ Raspberry Pi.
 
 ## Card reader setup
 
-This program uses the [nfc-pcsc] library to read (and someday?) write to PC/SC compatible smart card
-readers. The library is tested with the ACR122U but _should_ work with any PC/SC compatible reader.
-Instructions here are mainly focused on ACR122U because that's what has been tested.
+tapdeck reads PC/SC-compatible smart card readers through `libpcsclite` (via Deno FFI). It's tested
+with the ACR122U but _should_ work with any PC/SC-compatible reader. Instructions here are mainly
+focused on the ACR122U because that's what has been tested.
 
 Make sure your card reader can be detected by your system by installing drivers as needed. For
 ACR122U on Ubuntu/Debian/Raspberry Pi OS:
