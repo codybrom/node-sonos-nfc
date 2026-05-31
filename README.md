@@ -1,130 +1,107 @@
-[![Node.js CI](https://github.com/codybrom/tapdeck/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/codybrom/tapdeck/actions/workflows/node.js.yml)
+[![CI](https://github.com/codybrom/tapdeck/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/codybrom/tapdeck/actions/workflows/ci.yml)
 
 # tapdeck
 
-Tap an NFC tag to play Spotify, a Sonos favorite, or a playlist on your Sonos — like dropping a record on a deck. A small, **zero-dependency** Node app that talks to Sonos **directly over your LAN** (UPnP/SOAP): no separate API server, no cloud, no credentials.
+tapdeck lets you tap an NFC tag to play Spotify, a Sonos favorite, or a playlist on your Sonos — like dropping a record on a deck. Stick a cheap NFC sticker on a card (or a coaster, or a printed photo, or really anything), program it with what you want to hear, and tap it on a card reader to play. It ships as a single self-contained binary that reads your NFC reader and talks to your Sonos speakers directly over the local network, so there's no cloud service, no separate API server to babysit, no account credentials to configure, and no runtime to install.
 
-# Background
+## About
 
-Snooping around, I found [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), which does exactly what I want. Put a pre-programmed card (or anything else you can stick a NFC NTAG sticker on) near a cheap NFC card reader, and voilà, your chosen music plays from Apple Music or Spotify. Cards can also be programmed with commands, like skip track, adjust volume, turn on shuffle, etc, and are portable between rooms (if you care to setup multiple Vinyl Emulators). I imagined that making the cards themselves could be a fun activity, and with NTAG213 stickers <$15 for 50, we could make a bunch. There is also a nice aesthetic to controlling your streaming service with physical media -- the impetus behind Vinyl Emulator in the first place.
+There's a genuinely nice aesthetic to controlling a streaming service with physical media, and honestly making the cards is half the fun — NTAG213 stickers run well under $15 for fifty, so you can make a big stack of them and decorate them however you like. It's also a hit with kids: little ones who can't read yet can absolutely learn that tapping the dinosaur card plays the dinosaur songs.
 
-Sadly, newer versions of the recommended and widely available ACR122U card reader are [not currently compatible with NFCpy](https://github.com/nfcpy/nfcpy/issues/154), a library that Vinyl Emulator uses under the hood to talk to the reader. It turns out the ACR122U isn't really recommended for general NFC applications, since even though it has a chip inside that is capable of the full NFC suite of tricks, that chip is managed by an onboard controller that is not. The ACR122U is, however, a quite good smart card reader/writer via the PC/SC standard -- essentially a subset of NFC -- because that's what it was built for, and there are good PC/SC libraries available for most platforms and languages.
+tapdeck is tested with the ACR122U, an inexpensive and widely available USB reader. The ACR122U has a bit of a reputation for being awkward with general-purpose NFC libraries, but it's a perfectly good PC/SC smart-card reader, and PC/SC is all tapdeck needs — so it works reliably here, and should work with any other PC/SC-compatible reader too.
 
-Thus, I decided to build something compatible with Sonos Vinyl Emulator from the ground up using Node.js and the [nfc-pcsc](https://github.com/pokusew/nfc-pcsc) library, which _should_ support the wide range of card readers/writers that speak PC/SC, and _absolutely does_ support the ACR122U. Anyone using Vinyl Emulator can use this code for new controllers and their existing cards should work exactly the same. This might be useful, for example, if someone buys a second ACR122U and finds, as I did, that it doesn't work with NFCpy.
+## Thanks
 
-Going forward, maybe I (and who knows, others?) can add additional features beyond reading the card and playing a song or executing another Sonos command. It might be useful, for example, to add a front-end for programming the cards easily without having to know the details of the Sonos API or how to find the album, track, or playlist code from your service of choice.
+tapdeck began life as a fork of Ryan Olf's [node-sonos-nfc](https://github.com/ryanolf/node-sonos-nfc), and a big thank-you goes to Ryan for the original version that got this whole thing rolling. It has since been rewritten from the ground up: where the original leaned on a native Node addon to read the card reader and an external HTTP API to control Sonos, tapdeck now reads the reader directly through libpcsclite via FFI with no native addon at all, and drives Sonos with its own small, dependency-free UPnP engine. The original tap-a-card-to-play idea traces back to hankhank10's [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), which is well worth a look.
 
-For those parents out there with Sonos and kids, let me just say that this thing is a hit with kids at least as young 4.
+## What you'll need
 
-# Install
+You'll need a PC/SC card reader — an ACR122U is the safe bet — plugged into any always-on computer that sits on the same network as your Sonos. People often use a Raspberry Pi for this, but any spare machine will do. You'll also want a handful of NFC tags; the cheap NTAG213 stickers are perfect.
 
-## You need a computer
+# Installing
 
-The basic setup here involves a PC/SC card reader attached to a computer on the same network as your Sonos. The computer could be any computer that runs Node.js (so, any computer) and has drivers available for your card reader (depends on the card reader). If you have the ACR122U, you can use pretty much any computer with USB and networking capability. A popular option if you don't want to hook up to an existing computer is to purchase a Raspberry Pi. I _think_ pretty much any model will do if it can properly power the card reader. I've used a version 3 and 4. There is a super cheap and tiny Pi Zero that could probably run the software but may struggle to source enough power for the card reader when it's actually reading cards. Check out [the Raspberry Pi documentation](https://www.raspberrypi.org/documentation/) if you want to setup a Raspberry Pi.
+## Setting up the reader
 
-## Card reader setup
-
-This program uses the [nfc-pcsc] library to read (and someday?) write to PC/SC compatible smart card readers. The library is tested with the ACR122U but _should_ work with any PC/SC compatible reader. Instructions here are mainly focused on ACR122U because that's what has been tested.
-
-Make sure your card reader can be detected by your system by installing drivers as needed. For ACR122U on Ubuntu/Debian/Raspberry Pi OS:
+On a Linux box (Ubuntu, Debian, or Raspberry Pi OS), install the reader driver along with the PC/SC library and daemon:
 
 ```
-$ sudo apt install libacsccid1
+$ sudo apt install libacsccid1 libpcsclite1 pcscd
 ```
 
-You also need to make sure your computer can speak PC/SC. In Ubuntu/Debian, install PC/SC libraries and daemon. You'll need to have a suitable build environment setup, e.g. have gcc installed. See the [node-pcsclite](https://github.com/pokusew/node-pcsclite) instructions if you have any issues.
-
-```
-$ sudo apt install libpcsclite1 libpcsclite-dev pcscd
-```
-
-If you're running a version of Linux, your computer may try to use the nfc kernel module to talk to tyour ACR122U. You don't want it to do this, so make sure the nfc and enabling modules are not loaded. In Ubuntu/Debian/Raspberry Pi OS, blacklist pn533, pn533_usb, nfc modules so that they don't hijack the card reader.
+Linux will sometimes try to claim the ACR122U with its own kernel NFC modules, which gets in the way, so blacklist them and reboot to be safe:
 
 ```
 $ printf '%s\n' 'pn533' 'pn533_usb' 'nfc' | sudo tee /etc/modprobe.d/blacklist-nfc.conf
-```
-
-To make sure everything is square, it's probably a good idea to reboot. In Ubuntu/Debian/Raspberry Pi OS:
-
-```
 $ sudo reboot
 ```
 
-## Setup Node
+## Getting tapdeck
 
-Install node and npm, e.g. download or follow the [official instructions](https://nodejs.org/en/download/),
-so that you can run this code. On Ubuntu/Debian/Raspberry Pi OS, I do this:
-
-```
-$ curl -sL https://deb.nodesource.com/setup_24.x | sudo -E bash -
-$ sudo apt-get install -y nodejs
-```
-
-## Setup this code
-
-Install git and clone this repo. In Ubuntu/Debian/Raspberry Pi OS,
+Grab the binary for your platform from the [Releases](https://github.com/codybrom/tapdeck/releases) page and mark it executable:
 
 ```
-$ sudo apt install git
-$ git clone https://github.com/codybrom/tapdeck.git
+$ chmod +x tapdeck
 ```
 
-Install dependencies via `npm`. If you're following along in Ubuntu/Debian/Raspberry Pi OS, the commands are
+That's the whole install — the binary is self-contained, loads libpcsclite at runtime, and talks to Sonos over the network, so there's nothing else to set up. If you'd rather build it yourself, or you're on a platform without a prebuilt binary, see [Development](#development) below.
 
-```
-$ cd tapdeck
-$ npm install
-```
+## Configuring
 
-This app talks to your Sonos players **directly over the local network** (UPnP/SOAP) using a small, dependency-free engine built into the project — there's no separate API server to run and no Spotify/Apple credentials to configure. It just needs to be on the same LAN as your speakers (UDP multicast is used to discover them).
+Drop a usersettings.json next to the binary (start from the included example file) and, at the very least, set the room you want your cards to control. A full settings file looks like this:
 
-Copy `usersettings.json.example` to `usersettings.json` and set `sonos_room` to the room you want to control. If multicast discovery is blocked on your network, set `sonos_seed_ip` to the IP of any one Sonos player to skip discovery. `min_volume` (default 10) raises a near-muted speaker (volume < 5) to an audible level when a music card is scanned, so a tap never plays silently.
-
-**Supported tags:** `spotify:` (track/album/playlist), `favorite:<name>` and `playlist:<name>` (anything saved in your Sonos app — works for any service), `command:<x>` (raw transport: `play`, `pause`, `next`, `previous`, `volume/40`, `volume/+5`, `repeat/all`, `shuffle/on`, `crossfade/off`, `mute`, `clearqueue`), and `room:<name>` to switch rooms. Other music services (Apple/Amazon/TuneIn/BBC) are not built in — use a Sonos favorite instead.
-
-## Run all the time
-
-To run continuously and at boot, you'll want to run under some supervisor program. There are lots of options, like systemd (built-in already), supervisord, and pm2. I have found pm2, recommended by the author of Vinyl Emulator, to be very easy to use. To have pm2 spin-up tapdeck at boot and keep it
-running, install pm2 globally:
-
-```
-$ sudo npm install -g pm2
+```json
+{
+  "sonos_room": "Living Room",
+  "sonos_seed_ip": "",
+  "reset_repeat": true,
+  "reset_shuffle": true,
+  "reset_crossfade": true,
+  "min_volume": 10
+}
 ```
 
-and spin-up tapdeck:
+The room name is really the only thing you have to set, and it's matched without worrying about capitalization. If multicast discovery is blocked on your network and tapdeck can't find your speakers on its own, fill in a seed IP — the address of any one Sonos player — and it'll bootstrap from there. The three reset options control whether tapdeck turns off repeat, shuffle, and crossfade before it queues up new music, which it does by default so that a fresh tap behaves predictably. And the minimum volume is a small kindness: if you tap a music card while the speaker is turned almost all the way down, tapdeck nudges it back up so a card never seems to do nothing.
+
+## Running it
 
 ```
-$ pm2 start npm --name tapdeck -- start
+$ ./tapdeck
 ```
 
-Then, to configure your system to run the startup, follow the instructions given when you run
+It needs to be on the same network as your speakers, since it discovers them with UDP multicast. Tap a card and the matching music plays.
+
+# What you can put on a card
+
+The text you write to a tag is what decides what it does. A Spotify URI — something like spotify:track:…, spotify:album:…, or spotify:playlist:… — plays that item from Spotify. A tag that reads "favorite:" followed by the name of one of your saved Sonos favorites plays that favorite, and since favorites can point at any service you've connected in the Sonos app, that's also how you reach Apple Music, Amazon, radio stations, and the rest — none of those are built in on their own, so the trick is to save them as Sonos favorites. A "playlist:" tag followed by a Sonos playlist name plays that playlist, and a "room:" tag followed by a room name changes which room your taps control from then on. Finally, anything that starts with "command:" is passed straight through as a transport command — play, pause, next, previous, volume/40, volume/+5, repeat/all, shuffle/on, crossfade/off, mute, clearqueue, and so on.
+
+# Keeping it running
+
+For day-to-day use you'll want tapdeck under a process supervisor so it starts at boot and comes back if it ever exits. pm2 is an easy option:
 
 ```
+$ pm2 start ./tapdeck --name tapdeck
+$ pm2 save
 $ pm2 startup
 ```
 
-e.g.
-
-```
-$ sudo env PATH=$PATH:/usr/bin /usr/lib/node_modules/pm2/bin/pm2 startup systemd -u pi --hp /home/pi
-```
-
-## Debug
-
-You can monitor the process output to see what's going on. If you're using pm2, you can see the process output via
-
-```
-$ pm2 log
-```
+Run the command that pm2 startup prints to wire it into your init system. systemd works just as well if you'd rather point a unit file at the binary.
 
 # Programming cards
 
-## Card record format
+Each card holds an NDEF message, and tapdeck reads the first text or URI record off it and treats that as the tag text described above. This matches the card format used by [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), so cards made for that will work here unchanged.
 
-The cards are programmed per the instructions at [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator). One minor difference with this program compared to Vinyl Emulator is that this program turns off shuffle, repeat, and crossfade whenever new music is queued by default. This is configurable in `usersettings.json`, you can turn off this behaviour by adding and/or setting `reset_repeat`, `reset_shuffle` and, `reset_crossfade` parameters to False. You can also enable cross fade, shuffle, or repeat on a card-by-card basis by adding records to enable these features to the card.
+The simplest way to write cards is a phone app — [NFC Tools](https://www.wakdev.com/en/apps/nfc-tools-pc-mac.html) on iOS or Android does the job nicely. Write a single text or URI record containing whatever you want, like spotify:album:… or favorite:Coffee House. If a tag is brand new, format it for NDEF first (NXP TagWriter is handy for that) and then write your record.
 
-## Writing cards
+# Development
 
-You can probably use the card reader/writer you plan to use to write the cards using software like [NFC Tools](https://www.wakdev.com/en/apps/nfc-tools-pc-mac.html) on your Mac or PC. I like to use my iPhone. Most modern smartphones can read and write NFC with the right app.
+tapdeck is written in TypeScript and runs on [Deno](https://deno.com), which you only need if you want to build it or hack on it — running a release binary needs nothing at all. With Deno installed, the usual tasks are there:
 
-It's important that before you write, the card is properly erased and formatted. On my iPhone, I format the cards for NDEF using "NXP Tagwriter." Once the cards are formatted, I use NFC Tools on iOS to write the record(s).
+```
+$ deno task start     # run from source
+$ deno task test      # run the tests
+$ deno task lint
+$ deno task fmt
+$ deno task compile   # build the self-contained ./tapdeck binary
+```
+
+The NFC layer speaks to libpcsclite directly through Deno's FFI, so there's no native addon to compile, and the Sonos engine is a small, dependency-free UPnP/SOAP client. Running from source needs three permissions, all baked into the start task: FFI access for the reader, network access for Sonos, and read access for your settings file.

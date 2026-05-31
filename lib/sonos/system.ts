@@ -1,10 +1,20 @@
 // Owns discovery bootstrap, topology (room -> group coordinator), music-service
 // lookup, and favorites/playlists. One instance is cached for the process.
 
-import { discoverAnyPlayer } from './discovery.js';
-import { Player } from './player.js';
-import { PATH, URN, invoke } from './soap.js';
-import { decodeEntities, getTagText, getTagBlocks, getAttr } from './xml.js';
+import { discoverAnyPlayer } from './discovery.ts';
+import { Player } from './player.ts';
+import { invoke, PATH, URN } from './soap.ts';
+import { decodeEntities, getAttr, getTagBlocks, getTagText } from './xml.ts';
+
+export interface SpotifyService {
+  id: number;
+  type: number;
+}
+export interface MediaItem {
+  title: string;
+  uri: string;
+  metadata: string;
+}
 
 const RADIO_PREFIXES = [
   'x-sonosapi-stream:',
@@ -18,14 +28,15 @@ const RADIO_PREFIXES = [
 ];
 
 export class SonosSystem {
-  constructor({ seedIp } = {}) {
-    this._seedIp = seedIp;
+  private _seedBaseUrl: string | null;
+  private _rooms = new Map<string, { coordinatorUuid: string; baseUrl: string }>();
+  private _spotify: SpotifyService | null = null;
+
+  constructor({ seedIp }: { seedIp?: string } = {}) {
     this._seedBaseUrl = seedIp ? `http://${seedIp}:1400` : null;
-    this._rooms = new Map(); // lowercased room name -> { coordinatorUuid, baseUrl }
-    this._spotify = null; // { id, type }
   }
 
-  async bootstrap() {
+  async bootstrap(): Promise<this> {
     if (!this._seedBaseUrl) {
       const { ip } = await discoverAnyPlayer();
       this._seedBaseUrl = `http://${ip}:1400`;
@@ -34,21 +45,21 @@ export class SonosSystem {
     return this;
   }
 
-  async refreshTopology() {
+  async refreshTopology(): Promise<Map<string, { coordinatorUuid: string; baseUrl: string }>> {
     const res = await invoke(
-      this._seedBaseUrl,
+      this._seedBaseUrl!,
       PATH.ZoneGroupTopology,
       URN.ZoneGroupTopology,
-      'GetZoneGroupState'
+      'GetZoneGroupState',
     );
     const state = decodeEntities(getTagText(res, 'ZoneGroupState') || '');
-    const rooms = new Map();
+    const rooms = new Map<string, { coordinatorUuid: string; baseUrl: string }>();
     for (const group of getTagBlocks(state, 'ZoneGroup')) {
       const openTag = group.match(/^<ZoneGroup\b[^>]*>/)?.[0] || '';
       const coordinatorUuid = getAttr(openTag, 'Coordinator');
       const members = group.match(/<ZoneGroupMember\b[^>]*>/g) || [];
       const coordTag = members.find((m) => getAttr(m, 'UUID') === coordinatorUuid);
-      if (!coordTag) continue;
+      if (!coordTag || !coordinatorUuid) continue;
       const coordBaseUrl = locationToBaseUrl(getAttr(coordTag, 'Location'));
       if (!coordBaseUrl) continue;
       for (const m of members) {
@@ -62,7 +73,7 @@ export class SonosSystem {
   }
 
   // Returns the coordinator Player for a room. Refreshes topology once on a miss.
-  async resolveRoom(name) {
+  async resolveRoom(name: string): Promise<Player> {
     const key = String(name).toLowerCase();
     let entry = this._rooms.get(key);
     if (!entry) {
@@ -70,19 +81,26 @@ export class SonosSystem {
       entry = this._rooms.get(key);
     }
     if (!entry) {
-      throw new Error(`Sonos room "${name}" not found. Known rooms: ${[...this._rooms.keys()].join(', ')}`);
+      throw new Error(
+        `Sonos room "${name}" not found. Known rooms: ${[...this._rooms.keys()].join(', ')}`,
+      );
     }
     return new Player({ uuid: entry.coordinatorUuid, baseUrl: entry.baseUrl });
   }
 
   // { id, type } for Spotify (type = (id<<8)+7), derived at runtime and cached.
-  async getSpotifyService() {
+  async getSpotifyService(): Promise<SpotifyService> {
     if (this._spotify) return this._spotify;
-    const res = await invoke(this._seedBaseUrl, PATH.MusicServices, URN.MusicServices, 'ListAvailableServices');
+    const res = await invoke(
+      this._seedBaseUrl!,
+      PATH.MusicServices,
+      URN.MusicServices,
+      'ListAvailableServices',
+    );
     const list = decodeEntities(getTagText(res, 'AvailableServiceDescriptorList') || '');
     for (const svc of list.match(/<Service\b[^>]*>/g) || []) {
       if (getAttr(svc, 'Name') === 'Spotify') {
-        const id = parseInt(getAttr(svc, 'Id'), 10);
+        const id = parseInt(getAttr(svc, 'Id') || '', 10);
         this._spotify = { id, type: (id << 8) + 7 };
         return this._spotify;
       }
@@ -90,18 +108,18 @@ export class SonosSystem {
     throw new Error('Spotify is not configured in your Sonos app (no Spotify service found)');
   }
 
-  async getFavorites() {
+  getFavorites(): Promise<MediaItem[]> {
     return this._browseItems('FV:2');
   }
-  async getPlaylists() {
+  getPlaylists(): Promise<MediaItem[]> {
     return this._browseItems('SQ:');
   }
 
-  async _browseItems(objectId) {
-    const player = await this.resolveAnyPlayer();
+  private async _browseItems(objectId: string): Promise<MediaItem[]> {
+    const player = this.resolveAnyPlayer();
     const res = await player.browse(objectId);
     const didl = decodeEntities(getTagText(res, 'Result') || '');
-    const items = [];
+    const items: MediaItem[] = [];
     for (const block of [...getTagBlocks(didl, 'item'), ...getTagBlocks(didl, 'container')]) {
       const title = getTagText(block, 'dc:title');
       // <res> and <r:resMD> are entity-encoded a second time inside the DIDL.
@@ -112,14 +130,14 @@ export class SonosSystem {
     return items;
   }
 
-  async resolveAnyPlayer() {
+  resolveAnyPlayer(): Player {
     // Any coordinator works for read-only Browse / service listing.
     const first = this._rooms.values().next().value;
-    const baseUrl = first ? first.baseUrl : this._seedBaseUrl;
-    return new Player({ uuid: first?.coordinatorUuid, baseUrl });
+    const baseUrl = first ? first.baseUrl : this._seedBaseUrl!;
+    return new Player({ uuid: first?.coordinatorUuid ?? '', baseUrl });
   }
 
-  async playFavorite(coordinator, name) {
+  async playFavorite(coordinator: Player, name: string): Promise<string> {
     const fav = findByTitle(await this.getFavorites(), name);
     if (!fav) throw new Error(`Favorite "${name}" not found`);
     if (isRadio(fav.uri)) {
@@ -132,7 +150,7 @@ export class SonosSystem {
     return coordinator.play();
   }
 
-  async playPlaylist(coordinator, name) {
+  async playPlaylist(coordinator: Player, name: string): Promise<string> {
     const pl = findByTitle(await this.getPlaylists(), name);
     if (!pl) throw new Error(`Playlist "${name}" not found`);
     await coordinator.clearQueue();
@@ -142,16 +160,16 @@ export class SonosSystem {
   }
 }
 
-function findByTitle(items, name) {
+function findByTitle(items: MediaItem[], name: string): MediaItem | undefined {
   const n = String(name).toLowerCase();
   return items.find((i) => i.title.toLowerCase() === n);
 }
 
-function isRadio(uri) {
+function isRadio(uri: string): boolean {
   return RADIO_PREFIXES.some((p) => uri.startsWith(p));
 }
 
-function locationToBaseUrl(location) {
+function locationToBaseUrl(location: string | undefined): string | null {
   if (!location) return null;
   try {
     return new URL(location).origin; // http://192.168.0.195:1400

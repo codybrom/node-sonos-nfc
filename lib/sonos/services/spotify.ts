@@ -1,7 +1,10 @@
 // Spotify playback. Turns a `spotify:track|album|playlist:ID` URI into the
 // Sonos-native URI + DIDL metadata, then runs the "play now" queue sequence.
 
-function buildMetadata(encodedUri, serviceType) {
+import type { Player } from '../player.ts';
+import type { SonosSystem, SpotifyService } from '../system.ts';
+
+function buildMetadata(encodedUri: string, serviceType: number): string {
   return (
     '<DIDL-Lite xmlns:dc="http://purl.org/dc/elements/1.1/" ' +
     'xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" ' +
@@ -15,7 +18,10 @@ function buildMetadata(encodedUri, serviceType) {
 }
 
 // Build the { uri, metadata } a Sonos coordinator needs for a Spotify item.
-export function buildSpotifyTrack(spotifyUri, service) {
+export function buildSpotifyTrack(
+  spotifyUri: string,
+  service: SpotifyService,
+): { uri: string; metadata: string } {
   const enc = encodeURIComponent(spotifyUri);
   const uri = spotifyUri.startsWith('spotify:track:')
     ? `x-sonos-spotify:${enc}?sid=${service.id}&flags=32&sn=1`
@@ -24,7 +30,11 @@ export function buildSpotifyTrack(spotifyUri, service) {
 }
 
 // Play a Spotify URI immediately on the given coordinator.
-export async function now(coordinator, system, spotifyUri) {
+export async function now(
+  coordinator: Player,
+  system: SonosSystem,
+  spotifyUri: string,
+): Promise<string> {
   const service = await system.getSpotifyService();
   const { uri, metadata } = buildSpotifyTrack(spotifyUri, service);
   await coordinator.setAVTransport(`x-rincon-queue:${coordinator.uuid}#0`);
