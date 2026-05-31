@@ -27,14 +27,6 @@
     "dependencies": [
       "jsr:@std/assert@^1.0.13",
       "jsr:@std/testing@^1.0.9"
-    ],
-    "packageJson": {
-      "dependencies": [
-        "npm:jest@^30.4.2",
-        "npm:nfc-pcsc@~0.8.1",
-        "npm:nfccard-tool@~0.1.1",
-        "npm:prettier@^3.8.3"
-      ]
-    }
+    ]
   }
 }

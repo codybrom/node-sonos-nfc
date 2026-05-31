@@ -7,40 +7,26 @@ record on a deck. A small, **zero-dependency TypeScript app on [Deno](https://de
 your NFC reader via FFI and talks to Sonos **directly over your LAN** (UPnP/SOAP): no separate API
 server, no cloud, no credentials, no native addons.
 
-# Background
+# About
 
-Snooping around, I found [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), which
-does exactly what I want. Put a pre-programmed card (or anything else you can stick a NFC NTAG
-sticker on) near a cheap NFC card reader, and voilà, your chosen music plays from Apple Music or
-Spotify. Cards can also be programmed with commands, like skip track, adjust volume, turn on
-shuffle, etc, and are portable between rooms (if you care to setup multiple Vinyl Emulators). I
-imagined that making the cards themselves could be a fun activity, and with NTAG213 stickers <$15
-for 50, we could make a bunch. There is also a nice aesthetic to controlling your streaming service
-with physical media -- the impetus behind Vinyl Emulator in the first place.
+tapdeck turns NFC tags into a physical remote for your Sonos: stick an NTAG sticker on a card (or
+anything else), program it with a Spotify URI, a Sonos favorite or playlist, or a transport command,
+and tap it on a cheap PC/SC reader to play. There's a nice aesthetic to controlling streaming with
+physical media, and making the cards is a fun project — NTAG213 stickers run under $15 for 50. (For
+the parents out there: it's a hit with kids at least as young as 4.)
 
-Sadly, newer versions of the recommended and widely available ACR122U card reader are
-[not currently compatible with NFCpy](https://github.com/nfcpy/nfcpy/issues/154), a library that
-Vinyl Emulator uses under the hood to talk to the reader. It turns out the ACR122U isn't really
-recommended for general NFC applications, since even though it has a chip inside that is capable of
-the full NFC suite of tricks, that chip is managed by an onboard controller that is not. The ACR122U
-is, however, a quite good smart card reader/writer via the PC/SC standard -- essentially a subset of
-NFC -- because that's what it was built for, and there are good PC/SC libraries available for most
-platforms and languages.
+It's tested with the **ACR122U** — an inexpensive, widely available reader. The ACR122U isn't great
+for general NFC, but it's a solid PC/SC smart-card reader, which is all tapdeck needs: it reads tags
+through `libpcsclite` over Deno's FFI.
 
-Thus, I decided to build something compatible with Sonos Vinyl Emulator from the ground up using
-Node.js and the [nfc-pcsc](https://github.com/pokusew/nfc-pcsc) library, which _should_ support the
-wide range of card readers/writers that speak PC/SC, and _absolutely does_ support the ACR122U.
-Anyone using Vinyl Emulator can use this code for new controllers and their existing cards should
-work exactly the same. This might be useful, for example, if someone buys a second ACR122U and
-finds, as I did, that it doesn't work with NFCpy.
+## Thanks
 
-Going forward, maybe I (and who knows, others?) can add additional features beyond reading the card
-and playing a song or executing another Sonos command. It might be useful, for example, to add a
-front-end for programming the cards easily without having to know the details of the Sonos API or
-how to find the album, track, or playlist code from your service of choice.
-
-For those parents out there with Sonos and kids, let me just say that this thing is a hit with kids
-at least as young 4.
+tapdeck started as a fork of Ryan Olf's [node-sonos-nfc](https://github.com/ryanolf/node-sonos-nfc)
+— **thank you, Ryan**, for the original version that got this rolling. It has since been rewritten
+from the ground up: it runs on Deno/TypeScript, reads the card reader directly via FFI (no native
+addon), and drives Sonos with an in-house, zero-dependency UPnP engine instead of an external HTTP
+API. The original tap-a-card-to-play idea comes from
+[Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator) by hankhank10.
 
 # Install
 

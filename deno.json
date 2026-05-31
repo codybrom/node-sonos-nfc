@@ -1,4 +1,5 @@
 {
+  "version": "1.0.0",
   "tasks": {
     "start": "deno run --allow-ffi --allow-net --allow-read --allow-env=PCSC_LIB index.ts",
     "compile": "deno compile --allow-ffi --allow-net --allow-read --allow-env=PCSC_LIB -o tapdeck index.ts",
