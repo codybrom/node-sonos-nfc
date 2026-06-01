@@ -7,7 +7,7 @@ export type NdefRecord =
   | { type: 'unknown' };
 
 // NDEF URI abbreviation table (subset; index 0 = no prefix, which is what
-// `spotify:`/`favorite:` tags use).
+// `spotify:` tags use).
 const URI_PREFIXES = [
   '',
   'http://www.',
@@ -59,7 +59,9 @@ export function parseNdef(message: Uint8Array): NdefRecord[] {
     if (sr) {
       payloadLen = message[i++]!;
     } else {
-      payloadLen = (message[i]! << 24) | (message[i + 1]! << 16) | (message[i + 2]! << 8) |
+      payloadLen = (message[i]! << 24) |
+        (message[i + 1]! << 16) |
+        (message[i + 2]! << 8) |
         message[i + 3]!;
       i += 4;
     }
@@ -71,10 +73,16 @@ export function parseNdef(message: Uint8Array): NdefRecord[] {
 
     if (tnf === 0x01 && type === 'T') {
       const langLen = (payload[0] ?? 0) & 0x3f; // status byte: low 6 bits = lang code length
-      records.push({ type: 'text', text: decoder.decode(payload.slice(1 + langLen)) });
+      records.push({
+        type: 'text',
+        text: decoder.decode(payload.slice(1 + langLen)),
+      });
     } else if (tnf === 0x01 && type === 'U') {
       const prefix = URI_PREFIXES[payload[0] ?? 0] ?? '';
-      records.push({ type: 'uri', uri: prefix + decoder.decode(payload.slice(1)) });
+      records.push({
+        type: 'uri',
+        uri: prefix + decoder.decode(payload.slice(1)),
+      });
     } else {
       records.push({ type: 'unknown' });
     }

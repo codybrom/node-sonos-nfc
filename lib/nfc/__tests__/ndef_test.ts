@@ -27,15 +27,21 @@ Deno.test('parses a URI record (spotify: tag)', () => {
   assertEquals(firstPayload(parseNdef(msg)), 'spotify:track:abc123');
 });
 
-Deno.test('parses a text record (favorite tag)', () => {
-  const mem = tlv(textRecord('favorite:Songs'));
-  assertEquals(firstPayload(parseNdef(extractNdefMessage(mem)!)), 'favorite:Songs');
+Deno.test('parses a text record (room tag)', () => {
+  const mem = tlv(textRecord('room:Kitchen'));
+  assertEquals(
+    firstPayload(parseNdef(extractNdefMessage(mem)!)),
+    'room:Kitchen',
+  );
 });
 
 Deno.test('skips a lock-control TLV before the NDEF TLV', () => {
   const ndef = tlv(uriRecord('command:play'));
   const mem = new Uint8Array([0x01, 0x03, 0xaa, 0xbb, 0xcc, ...ndef]); // 0x01 lock TLV, len 3
-  assertEquals(firstPayload(parseNdef(extractNdefMessage(mem)!)), 'command:play');
+  assertEquals(
+    firstPayload(parseNdef(extractNdefMessage(mem)!)),
+    'command:play',
+  );
 });
 
 Deno.test('returns null when the NDEF message is not fully read yet', () => {
