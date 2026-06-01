@@ -6,32 +6,53 @@
 // (GetStatusChange, Transmit, Connect) are declared `nonblocking` so they run
 // off the main thread and return Promises.
 
-const LIB_PATH = Deno.env.get('PCSC_LIB') ?? 'libpcsclite.so.1';
+const SYMBOLS = {
+  SCardEstablishContext: {
+    parameters: ['u64', 'pointer', 'pointer', 'buffer'],
+    result: 'i32',
+  },
+  SCardReleaseContext: { parameters: ['u64'], result: 'i32' },
+  SCardListReaders: {
+    parameters: ['u64', 'pointer', 'buffer', 'buffer'],
+    result: 'i32',
+  },
+  SCardGetStatusChange: {
+    parameters: ['u64', 'u64', 'buffer', 'u64'],
+    result: 'i32',
+    nonblocking: true,
+  },
+  SCardConnect: {
+    parameters: ['u64', 'buffer', 'u64', 'u64', 'buffer', 'buffer'],
+    result: 'i32',
+    nonblocking: true,
+  },
+  SCardTransmit: {
+    parameters: [
+      'u64',
+      'pointer',
+      'buffer',
+      'u64',
+      'pointer',
+      'buffer',
+      'buffer',
+    ],
+    result: 'i32',
+    nonblocking: true,
+  },
+  SCardDisconnect: { parameters: ['u64', 'u64'], result: 'i32' },
+} as const;
 
-const lib = Deno.dlopen(
-  LIB_PATH,
-  {
-    SCardEstablishContext: { parameters: ['u64', 'pointer', 'pointer', 'buffer'], result: 'i32' },
-    SCardReleaseContext: { parameters: ['u64'], result: 'i32' },
-    SCardListReaders: { parameters: ['u64', 'pointer', 'buffer', 'buffer'], result: 'i32' },
-    SCardGetStatusChange: {
-      parameters: ['u64', 'u64', 'buffer', 'u64'],
-      result: 'i32',
-      nonblocking: true,
-    },
-    SCardConnect: {
-      parameters: ['u64', 'buffer', 'u64', 'u64', 'buffer', 'buffer'],
-      result: 'i32',
-      nonblocking: true,
-    },
-    SCardTransmit: {
-      parameters: ['u64', 'pointer', 'buffer', 'u64', 'pointer', 'buffer', 'buffer'],
-      result: 'i32',
-      nonblocking: true,
-    },
-    SCardDisconnect: { parameters: ['u64', 'u64'], result: 'i32' },
-  } as const,
-);
+// Open libpcsclite lazily and memoize it. Loading (and reading PCSC_LIB) at
+// import time would force every entry point (e.g. the `accounts` CLI) to depend
+// on the library and env access; only the reader actually needs them.
+let _lib: Deno.DynamicLibrary<typeof SYMBOLS> | null = null;
+function lib(): Deno.DynamicLibrary<typeof SYMBOLS> {
+  if (!_lib) {
+    const path = Deno.env.get('PCSC_LIB') ?? 'libpcsclite.so.1';
+    _lib = Deno.dlopen(path, SYMBOLS);
+  }
+  return _lib;
+}
 
 // Constants (from /usr/include/PCSC/pcsclite.h).
 export const SCARD_SCOPE_SYSTEM = 2n;
@@ -41,7 +62,7 @@ export const SCARD_LEAVE_CARD = 0n;
 export const STATE_UNAWARE = 0x0000;
 export const STATE_EMPTY = 0x0010;
 export const STATE_PRESENT = 0x0020;
-export const INFINITE = 0xFFFFFFFFn;
+export const INFINITE = 0xffffffffn;
 const S_SUCCESS = 0;
 
 // SCARD_READERSTATE layout (8-byte fields, MAX_ATR_SIZE=33):
@@ -85,24 +106,30 @@ export function cstr(s: string): Buf {
 
 export function establishContext(): bigint {
   const ctx = new Uint8Array(8);
-  check(lib.symbols.SCardEstablishContext(SCARD_SCOPE_SYSTEM, null, null, ctx), 'EstablishContext');
+  check(
+    lib().symbols.SCardEstablishContext(SCARD_SCOPE_SYSTEM, null, null, ctx),
+    'EstablishContext',
+  );
   return new DataView(ctx.buffer).getBigUint64(0, true);
 }
 
 export function releaseContext(ctx: bigint): void {
-  lib.symbols.SCardReleaseContext(ctx);
+  lib().symbols.SCardReleaseContext(ctx);
 }
 
 // Returns the reader names (the API returns a multi-string: NUL-separated, double-NUL terminated).
 export function listReaders(ctx: bigint): string[] {
   const len = new Uint8Array(8);
-  const rv1 = lib.symbols.SCardListReaders(ctx, null, null, len);
+  const rv1 = lib().symbols.SCardListReaders(ctx, null, null, len);
   if (rv1 !== S_SUCCESS) return []; // e.g. SCARD_E_NO_READERS_AVAILABLE
   const size = Number(new DataView(len.buffer).getBigUint64(0, true));
   if (!size) return [];
   const buf = new Uint8Array(size);
-  check(lib.symbols.SCardListReaders(ctx, null, buf, len), 'ListReaders');
-  return decoder.decode(buf).split('\0').filter((s) => s.length > 0);
+  check(lib().symbols.SCardListReaders(ctx, null, buf, len), 'ListReaders');
+  return decoder
+    .decode(buf)
+    .split('\0')
+    .filter((s) => s.length > 0);
 }
 
 // Build a READERSTATE buffer pointing at `readerName`, with the given current state.
@@ -124,11 +151,13 @@ export async function waitForChange(
   timeoutMs: bigint = INFINITE,
 ): Promise<number> {
   const rs = readerState(readerName, currentState);
-  const rv = await lib.symbols.SCardGetStatusChange(ctx, timeoutMs, rs, 1n);
+  const rv = await lib().symbols.SCardGetStatusChange(ctx, timeoutMs, rs, 1n);
   // 0x8010000A = SCARD_E_TIMEOUT — treat as "no change".
-  if ((rv >>> 0) === 0x8010000a) return currentState;
+  if (rv >>> 0 === 0x8010000a) return currentState;
   check(rv, 'GetStatusChange');
-  return Number(new DataView(rs.buffer).getBigUint64(RS_EVENT, true) & 0xffffffffn);
+  return Number(
+    new DataView(rs.buffer).getBigUint64(RS_EVENT, true) & 0xffffffffn,
+  );
 }
 
 export interface Card {
@@ -139,7 +168,7 @@ export interface Card {
 export async function connect(ctx: bigint, readerName: string): Promise<Card> {
   const hCard = new Uint8Array(8);
   const proto = new Uint8Array(8);
-  const rv = await lib.symbols.SCardConnect(
+  const rv = await lib().symbols.SCardConnect(
     ctx,
     cstr(readerName),
     SCARD_SHARE_SHARED,
@@ -155,7 +184,7 @@ export async function connect(ctx: bigint, readerName: string): Promise<Card> {
 }
 
 export function disconnect(card: Card): void {
-  lib.symbols.SCardDisconnect(card.handle, SCARD_LEAVE_CARD);
+  lib().symbols.SCardDisconnect(card.handle, SCARD_LEAVE_CARD);
 }
 
 // SCARD_IO_REQUEST { DWORD dwProtocol; DWORD cbPciLength; } = 16 bytes.
@@ -173,7 +202,7 @@ export async function transmit(card: Card, apdu: Buf): Promise<Uint8Array> {
   const recv = new Uint8Array(264);
   const recvLen = new Uint8Array(8);
   new DataView(recvLen.buffer).setBigUint64(0, BigInt(recv.length), true);
-  const rv = await lib.symbols.SCardTransmit(
+  const rv = await lib().symbols.SCardTransmit(
     card.handle,
     Deno.UnsafePointer.of(send),
     apdu,

@@ -18,13 +18,18 @@ function buildMetadata(encodedUri: string, serviceType: number): string {
 }
 
 // Build the { uri, metadata } a Sonos coordinator needs for a Spotify item.
+// `accountSn` is the Sonos account serial number — which linked Spotify account
+// to play from (1 = the first/default account). It selects the account via the
+// track URI's `sn=`; the cdudn metadata token stays at `-0-` (observed constant
+// across accounts on real systems — `sn` is the actual account selector).
 export function buildSpotifyTrack(
   spotifyUri: string,
   service: SpotifyService,
+  accountSn = 1,
 ): { uri: string; metadata: string } {
   const enc = encodeURIComponent(spotifyUri);
   const uri = spotifyUri.startsWith('spotify:track:')
-    ? `x-sonos-spotify:${enc}?sid=${service.id}&flags=32&sn=1`
+    ? `x-sonos-spotify:${enc}?sid=${service.id}&flags=32&sn=${accountSn}`
     : `x-rincon-cpcontainer:0006206c${enc}`;
   return { uri, metadata: buildMetadata(enc, service.type) };
 }
@@ -34,10 +39,11 @@ export async function now(
   coordinator: Player,
   system: SonosSystem,
   spotifyUri: string,
+  accountSn = 1,
 ): Promise<string> {
   const service = await system.getSpotifyService();
-  const { uri, metadata } = buildSpotifyTrack(spotifyUri, service);
-  await coordinator.setAVTransport(`x-rincon-queue:${coordinator.uuid}#0`);
+  const { uri, metadata } = buildSpotifyTrack(spotifyUri, service, accountSn);
+  await coordinator.setAVTransport(coordinator.queueUri());
   const firstTrack = await coordinator.addURIToQueue(uri, metadata, true, 1);
   await coordinator.trackSeek(firstTrack);
   return coordinator.play();

@@ -9,7 +9,9 @@ let enginePromise: Promise<SonosSystem> | null = null;
 
 // Returns the cached SonosSystem, bootstrapping (discover + topology) on first call.
 // `opts.seedIp` skips SSDP discovery and talks to a known player directly.
-export function getEngine(opts: { seedIp?: string } = {}): Promise<SonosSystem> {
+export function getEngine(
+  opts: { seedIp?: string } = {},
+): Promise<SonosSystem> {
   if (!enginePromise) {
     enginePromise = new SonosSystem(opts).bootstrap().catch((err) => {
       enginePromise = null; // allow retry on next tap

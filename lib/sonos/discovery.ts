@@ -22,9 +22,9 @@ const M_SEARCH = Buffer.from(
 );
 
 // Resolve to { ip } of the first ZonePlayer that answers, or reject on timeout.
-export function discoverAnyPlayer({ timeout = 5000 }: { timeout?: number } = {}): Promise<
-  { ip: string }
-> {
+export function discoverAnyPlayer({
+  timeout = 5000,
+}: { timeout?: number } = {}): Promise<{ ip: string }> {
   return new Promise((resolve, reject) => {
     const socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
     let done = false;
@@ -61,14 +61,19 @@ export function discoverAnyPlayer({ timeout = 5000 }: { timeout?: number } = {})
         // some platforms restrict these; multicast send still works
       }
       const send = () => {
-        if (!done) socket.send(M_SEARCH, 0, M_SEARCH.length, SSDP_PORT, SSDP_ADDR);
+        if (!done) {
+          socket.send(M_SEARCH, 0, M_SEARCH.length, SSDP_PORT, SSDP_ADDR);
+        }
       };
       send();
       retryTimer = setInterval(send, 1000);
     });
 
     const deadline = setTimeout(
-      () => finish(new Error(`No Sonos ZonePlayer found within ${timeout}ms (SSDP)`)),
+      () =>
+        finish(
+          new Error(`No Sonos ZonePlayer found within ${timeout}ms (SSDP)`),
+        ),
       timeout,
     );
   });
