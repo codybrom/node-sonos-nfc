@@ -244,8 +244,10 @@ export class SonosSystem {
         ...getTagBlocks(didl, 'container'),
       ]
     ) {
-      const title = getTagText(block, 'dc:title');
-      // <res> and <r:resMD> are entity-encoded a second time inside the DIDL.
+      // The title, <res>, and <r:resMD> are each entity-encoded a second time
+      // inside the DIDL, so decode them — titles like `Don&apos;t Start Now`
+      // would otherwise show their raw entities in `status`/`setup` output.
+      const title = decodeEntities(getTagText(block, 'dc:title') || '');
       const uri = decodeEntities(getTagText(block, 'res') || '');
       const metadata = decodeEntities(getTagText(block, 'r:resMD') || '');
       if (title) items.push({ title, uri, metadata });
