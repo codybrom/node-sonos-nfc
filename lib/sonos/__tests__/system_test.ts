@@ -28,7 +28,8 @@ const spotifyResMD = (token: string) =>
   );
 
 const FAV_DIDL = '<DIDL-Lite>' +
-  '<item id="FV:2/1"><dc:title>Radio One</dc:title>' +
+  // Title carries an entity (`&amp;`) — must come back decoded.
+  '<item id="FV:2/1"><dc:title>Rock &amp; Roll</dc:title>' +
   '<res protocolInfo="x-sonosapi-hls:*:*:*">x-sonosapi-hls:foo?sid=37&amp;flags=296</res>' +
   `<r:resMD>${encodeEntities('<DIDL-Lite>radio-meta</DIDL-Lite>')}</r:resMD></item>` +
   // Spotify account "0" — has a playable favorite, so its sn=2 is discoverable.
@@ -159,7 +160,7 @@ Deno.test(
       const favs = await (await booted()).getFavorites();
       assertEquals(
         favs.map((f) => f.title),
-        ['Radio One', 'Songs', 'Discover Weekly'],
+        ['Rock & Roll', 'Songs', 'Discover Weekly'], // title entity decoded
       );
       const radio = favs[0]!;
       assertEquals(radio.uri, 'x-sonosapi-hls:foo?sid=37&flags=296');
