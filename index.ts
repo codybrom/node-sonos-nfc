@@ -35,6 +35,22 @@ if (Deno.args[0] === 'setup') {
   Deno.exit(0);
 }
 
+// `tapdeck play <tag text>` — run a tag through the same path a tapped card
+// takes, then exit. Handy for testing a Spotify URI (or command:/room:) without
+// programming a physical tag, e.g. `tapdeck play spotify:track:<id>`.
+if (Deno.args[0] === 'play') {
+  const text = Deno.args.slice(1).join(' ');
+  if (!text) {
+    console.error('Usage: tapdeck play <tag text>   e.g. spotify:track:<id>');
+    Deno.exit(1);
+  }
+  const { default: processSonosCommand } = await import(
+    './lib/process_sonos_command.ts'
+  );
+  await processSonosCommand(text);
+  Deno.exit(0);
+}
+
 // First run with no config — guide the user straight into setup instead of
 // silently falling back to defaults.
 if (!hasUserConfig()) {
