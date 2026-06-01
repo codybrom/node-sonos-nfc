@@ -17,7 +17,13 @@ const PLAYMODE: Record<string, { shuffle: boolean; repeat: Repeat }> = {
   SHUFFLE_REPEAT_ONE: { shuffle: true, repeat: 'one' },
 };
 
-function encodePlayMode({ shuffle, repeat }: { shuffle: boolean; repeat: Repeat }): string {
+function encodePlayMode({
+  shuffle,
+  repeat,
+}: {
+  shuffle: boolean;
+  repeat: Repeat;
+}): string {
   for (const [name, v] of Object.entries(PLAYMODE)) {
     if (v.shuffle === shuffle && v.repeat === repeat) return name;
   }
@@ -38,10 +44,23 @@ export class Player {
     args = '<InstanceID>0</InstanceID>',
     opts?: { timeout?: number },
   ): Promise<string> {
-    return invoke(this.baseUrl, PATH.AVTransport, URN.AVTransport, action, args, opts);
+    return invoke(
+      this.baseUrl,
+      PATH.AVTransport,
+      URN.AVTransport,
+      action,
+      args,
+      opts,
+    );
   }
   private _rc(action: string, args: string): Promise<string> {
-    return invoke(this.baseUrl, PATH.RenderingControl, URN.RenderingControl, action, args);
+    return invoke(
+      this.baseUrl,
+      PATH.RenderingControl,
+      URN.RenderingControl,
+      action,
+      args,
+    );
   }
 
   play(): Promise<string> {
@@ -89,26 +108,40 @@ export class Player {
     return this.mute(false);
   }
   async getVolume(): Promise<number> {
-    const res = await this._rc('GetVolume', '<InstanceID>0</InstanceID><Channel>Master</Channel>');
+    const res = await this._rc(
+      'GetVolume',
+      '<InstanceID>0</InstanceID><Channel>Master</Channel>',
+    );
     return parseInt(getTagText(res, 'CurrentVolume') || '0', 10);
   }
 
-  async getPlayMode(): Promise<string> {
+  // PlayMode is packed (repeat+shuffle); these stay private because callers only
+  // ever want to flip one dimension, which setRepeat/setShuffle below expose.
+  private async _getPlayMode(): Promise<string> {
     const res = await this._av('GetTransportSettings');
     return getTagText(res, 'PlayMode') || 'NORMAL';
   }
-  setPlayMode(mode: string): Promise<string> {
-    return this._av('SetPlayMode', `<InstanceID>0</InstanceID><NewPlayMode>${mode}</NewPlayMode>`);
+  private _setPlayMode(mode: string): Promise<string> {
+    return this._av(
+      'SetPlayMode',
+      `<InstanceID>0</InstanceID><NewPlayMode>${mode}</NewPlayMode>`,
+    );
   }
   // Flip only the repeat dimension, preserving shuffle.
   async setRepeat(repeat: Repeat): Promise<string> {
-    const cur = PLAYMODE[await this.getPlayMode()] ?? { shuffle: false, repeat: 'none' as Repeat };
-    return this.setPlayMode(encodePlayMode({ shuffle: cur.shuffle, repeat }));
+    const cur = PLAYMODE[await this._getPlayMode()] ?? {
+      shuffle: false,
+      repeat: 'none' as Repeat,
+    };
+    return this._setPlayMode(encodePlayMode({ shuffle: cur.shuffle, repeat }));
   }
   // Flip only the shuffle dimension, preserving repeat.
   async setShuffle(shuffle: boolean): Promise<string> {
-    const cur = PLAYMODE[await this.getPlayMode()] ?? { shuffle: false, repeat: 'none' as Repeat };
-    return this.setPlayMode(encodePlayMode({ shuffle, repeat: cur.repeat }));
+    const cur = PLAYMODE[await this._getPlayMode()] ?? {
+      shuffle: false,
+      repeat: 'none' as Repeat,
+    };
+    return this._setPlayMode(encodePlayMode({ shuffle, repeat: cur.repeat }));
   }
 
   async getTransportState(): Promise<string> {
@@ -147,6 +180,12 @@ export class Player {
       { timeout: 12000 },
     );
     return parseInt(getTagText(res, 'FirstTrackNumberEnqueued') || '1', 10);
+  }
+
+  // The transport URI for this coordinator's own queue (track 0). Owning the
+  // `x-rincon-queue:` scheme here keeps queue-addressing detail out of callers.
+  queueUri(): string {
+    return `x-rincon-queue:${this.uuid}#0`;
   }
 
   // Raw ContentDirectory Browse; caller parses the <Result> DIDL.
