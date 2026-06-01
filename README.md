@@ -1,53 +1,56 @@
+# Tapdeck
+
 [![CI](https://github.com/codybrom/tapdeck/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/codybrom/tapdeck/actions/workflows/ci.yml)
 
-# tapdeck
+## Getting Started
 
-tapdeck lets you tap an NFC tag to play Spotify, a Sonos favorite, or a playlist on your Sonos — like dropping a record on a deck. Stick a cheap NFC sticker on a card (or a coaster, or a printed photo, or really anything), program it with what you want to hear, and tap it on a card reader to play. It ships as a single self-contained binary that reads your NFC reader and talks to your Sonos speakers directly over the local network, so there's no cloud service, no separate API server to babysit, no account credentials to configure, and no runtime to install.
+There's something that just feels right about using your hands and physical objects to play music. Tapdeck was built to make the software side of reading NFC tags and play Spotify to a Sonos system as easy as possible. A self-contained binary interfaces with a USB NFC reader to control Sonos speakers over the local network without API keys or logins.
 
-## About
+### Items You'll Need
 
-There's a genuinely nice aesthetic to controlling a streaming service with physical media, and honestly making the cards is half the fun — NTAG213 stickers run well under $15 for fifty, so you can make a big stack of them and decorate them however you like. It's also a hit with kids: little ones who can't read yet can absolutely learn that tapping the dinosaur card plays the dinosaur songs.
+- A Raspberry Pi (or other always-on Linux machine)
+- A USB ACR122U RFID/NFC reader
+- Programmable NFC tags, like cheap NTAG213 stickers
+- A smartphone to program the tags
 
-tapdeck is tested with the ACR122U, an inexpensive and widely available USB reader. The ACR122U has a bit of a reputation for being awkward with general-purpose NFC libraries, but it's a perfectly good PC/SC smart-card reader, and PC/SC is all tapdeck needs — so it works reliably here, and should work with any other PC/SC-compatible reader too.
+Tapdeck was specifically built for use with the ACR122U because it is an inexpensive and widely available USB reader. You can find it online from a variety of sellers, sometimes with included tags.
 
-## Thanks
+### Setting up the NFC reader
 
-tapdeck began life as a fork of Ryan Olf's [node-sonos-nfc](https://github.com/ryanolf/node-sonos-nfc), and a big thank-you goes to Ryan for the original version that got this whole thing rolling. It has since been rewritten from the ground up: where the original leaned on a native Node addon to read the card reader and an external HTTP API to control Sonos, tapdeck now reads the reader directly through libpcsclite via FFI with no native addon at all, and drives Sonos with its own small, dependency-free UPnP engine. The original tap-a-card-to-play idea traces back to hankhank10's [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), which is well worth a look.
+On your Raspberry Pi (or any Debian/Ubuntu machine), install the reader's driver, middleware and daemon:
 
-## What you'll need
-
-You'll need a PC/SC card reader — an ACR122U is the safe bet — plugged into any always-on computer that sits on the same network as your Sonos. People often use a Raspberry Pi for this, but any spare machine will do. You'll also want a handful of NFC tags; the cheap NTAG213 stickers are perfect.
-
-# Installing
-
-## Setting up the reader
-
-On a Linux box (Ubuntu, Debian, or Raspberry Pi OS), install the reader driver along with the PC/SC library and daemon:
-
-```
-$ sudo apt install libacsccid1 libpcsclite1 pcscd
+```bash
+sudo apt install libacsccid1 libpcsclite1 pcscd
 ```
 
-Linux will sometimes try to claim the ACR122U with its own kernel NFC modules, which gets in the way, so blacklist them and reboot to be safe:
+Linux will sometimes try to claim the ACR122U with its own kernel NFC modules, so before going any further, blacklist them and reboot:
 
-```
-$ printf '%s\n' 'pn533' 'pn533_usb' 'nfc' | sudo tee /etc/modprobe.d/blacklist-nfc.conf
-$ sudo reboot
-```
-
-## Getting tapdeck
-
-Grab the binary for your platform from the [Releases](https://github.com/codybrom/tapdeck/releases) page and mark it executable:
-
-```
-$ chmod +x tapdeck
+```bash
+printf '%s\n' 'pn533' 'pn533_usb' 'nfc' | sudo tee /etc/modprobe.d/blacklist-nfc.conf
+sudo reboot
 ```
 
-That's the whole install — the binary is self-contained, loads libpcsclite at runtime, and talks to Sonos over the network, so there's nothing else to set up. If you'd rather build it yourself, or you're on a platform without a prebuilt binary, see [Development](#development) below.
+### Installing Tapdeck
 
-## Configuring
+Grab the binary for your platform from [Releases](https://github.com/codybrom/tapdeck/releases), make it executable, and move it onto your `PATH`:
 
-Drop a usersettings.json next to the binary (start from the included example file) and, at the very least, set the room you want your cards to control. A full settings file looks like this:
+| Device Type                                  | Filename               |
+| -------------------------------------------- | ---------------------- |
+| Raspberry Pi or other Arm-based Linux device | `tapdeck-linux-arm64`  |
+| Intel/AMD-based Linux devices                | `tapdeck-linux-x86_64` |
+
+```bash
+chmod +x tapdeck-linux-arm64
+sudo mv tapdeck-linux-arm64 /usr/local/bin/tapdeck
+```
+
+For other platforms, or to build it yourself, see [Development](#development).
+
+### Configuring
+
+Run `tapdeck setup`. It finds your system, asks which room and Spotify account you want to use, and writes your config to `~/.tapdeck/config.json`.
+
+#### Example Config
 
 ```json
 {
@@ -56,52 +59,84 @@ Drop a usersettings.json next to the binary (start from the included example fil
   "reset_repeat": true,
   "reset_shuffle": true,
   "reset_crossfade": true,
-  "min_volume": 10
+  "min_volume": 10,
+  "spotify_account_sn": 1
 }
 ```
 
-The room name is really the only thing you have to set, and it's matched without worrying about capitalization. If multicast discovery is blocked on your network and tapdeck can't find your speakers on its own, fill in a seed IP — the address of any one Sonos player — and it'll bootstrap from there. The three reset options control whether tapdeck turns off repeat, shuffle, and crossfade before it queues up new music, which it does by default so that a fresh tap behaves predictably. And the minimum volume is a small kindness: if you tap a music card while the speaker is turned almost all the way down, tapdeck nudges it back up so a card never seems to do nothing.
+### Troubleshooting Setup
 
-## Running it
+If you have any issues, you can run `tapdeck status` to get a readout of what tapdeck can see on your system.
 
-```
-$ ./tapdeck
-```
+```bash
+$ tapdeck status
+Connected to Sonos at 192.168.0.195
 
-It needs to be on the same network as your speakers, since it discovers them with UDP multicast. Tap a card and the matching music plays.
+Rooms — set "sonos_room" to the one your cards should control:
+  Kitchen              192.168.0.96
+  Living Room          192.168.0.153
+  Office               192.168.0.195
 
-# What you can put on a card
-
-The text you write to a tag is what decides what it does. A Spotify URI — something like spotify:track:…, spotify:album:…, or spotify:playlist:… — plays that item from Spotify. A tag that reads "favorite:" followed by the name of one of your saved Sonos favorites plays that favorite, and since favorites can point at any service you've connected in the Sonos app, that's also how you reach Apple Music, Amazon, radio stations, and the rest — none of those are built in on their own, so the trick is to save them as Sonos favorites. A "playlist:" tag followed by a Sonos playlist name plays that playlist, and a "room:" tag followed by a room name changes which room your taps control from then on. Finally, anything that starts with "command:" is passed straight through as a transport command — play, pause, next, previous, volume/40, volume/+5, repeat/all, shuffle/on, crossfade/off, mute, clearqueue, and so on.
-
-# Keeping it running
-
-For day-to-day use you'll want tapdeck under a process supervisor so it starts at boot and comes back if it ever exits. pm2 is an easy option:
-
-```
-$ pm2 start ./tapdeck --name tapdeck
-$ pm2 save
-$ pm2 startup
+Spotify accounts — set "spotify_account_sn" to the one you want:
+  spotify_account_sn: 2 [token 0]
+      • Songs
 ```
 
-Run the command that pm2 startup prints to wire it into your init system. systemd works just as well if you'd rather point a unit file at the binary.
+- Only `sonos_room` is required for Tapdeck to work. It is matched case-insensitively.
+- If Tapdeck can't automatically discover your speakers, you can use the `sonos_seed_ip` on the config to bootstrap discovery with a known IP of a speaker. Sleeping speakers may not appear if something hasn't been played recently.
+- The `reset_*` flags clear repeat, shuffle, and crossfade before each tap so playback starts predictably, and `min_volume` raises a near-silent speaker so a tap is never inaudible.
+- `spotify_account_sn` chooses which linked Spotify account to play from. If you have more than one Spotify account tied to your Sonos system and are having trouble setting the right account, try playing from the account you wish to use using the Sonos app and then check the value in `tapdeck status`.
 
-# Programming cards
+## Running Tapdeck
 
-Each card holds an NDEF message, and tapdeck reads the first text or URI record off it and treats that as the tag text described above. This matches the card format used by [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator), so cards made for that will work here unchanged.
+Make sure your reader is plugged in and active, then run `tapdeck` and tap a tag. You will most likely hear the reader beep or see the reader's LED turn green when it has successfully detected a tag. If you have issues with tag reads, please note that a successful read may require hovering over the reader for about 1-2 seconds after it beeps/LED turns green.
 
-The simplest way to write cards is a phone app — [NFC Tools](https://www.wakdev.com/en/apps/nfc-tools-pc-mac.html) on iOS or Android does the job nicely. Write a single text or URI record containing whatever you want, like spotify:album:… or favorite:Coffee House. If a tag is brand new, format it for NDEF first (NXP TagWriter is handy for that) and then write your record.
+### Running Tapdeck at Boot / In the Background
 
-# Development
+To start it at boot and bring it back if it exits, run it under a supervisor like pm2:
 
-tapdeck is written in TypeScript and runs on [Deno](https://deno.com), which you only need if you want to build it or hack on it — running a release binary needs nothing at all. With Deno installed, the usual tasks are there:
-
+```bash
+pm2 start tapdeck --name tapdeck
+pm2 save
+pm2 startup
 ```
-$ deno task start     # run from source
-$ deno task test      # run the tests
-$ deno task lint
-$ deno task fmt
-$ deno task compile   # build the self-contained ./tapdeck binary
+
+## Programming Tags
+
+Tapdeck reads the first text or URI record on a tag and acts on it. To get a Spotify item's ID, copy its share URL and take the part before any query params (i.e. ignore anything after the `?`, like `?si=6f54337b83214964`):
+
+```txt
+https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT?si=6f54337b83214964 -> spotify:track:4cOdK2wGLETKBW3PvgPWqT
 ```
 
-The NFC layer speaks to libpcsclite directly through Deno's FFI, so there's no native addon to compile, and the Sonos engine is a small, dependency-free UPnP/SOAP client. Running from source needs three permissions, all baked into the start task: FFI access for the reader, network access for Sonos, and read access for your settings file.
+- `spotify:<type>:<id>` - Spotify media items
+  - `spotify:track:<id>` - Single song
+  - `spotify:album:<id>` - Single album
+  - `spotify:playlist:<id>` — Spotify Playlist (account must have access)
+- `room:<name>` — Change which room your taps control from then on.
+- `command:<verb>` — transport commands
+  - `command:play`
+  - `command:pause`
+  - `command:next`
+  - `command:previous`
+  - `command:volume/40`
+  - `command:volume/+5`
+  - `command:repeat/all`
+  - `command:shuffle/on`
+  - `command:crossfade/off`
+  - `command:mute`
+  - `command:clearqueue`
+
+This is the same card format used by [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator). Write tags with a phone app like [NFC Tools](https://www.wakdev.com/en/apps/nfc-tools-pc-mac.html): a single text or URI record holding the text above. Format brand-new tags for NDEF first (NXP TagWriter handles that).
+
+## Development
+
+Tapdeck is written in TypeScript and runs on [Deno](https://deno.com). From source it needs FFI access (the reader), network access (Sonos), read and write access (the config file `setup` creates), permission to run `pm2` (setup's optional autostart step) and env access, all of which are baked into the start task in `deno.json` (run it with `deno task start`).
+
+## Acknowledgements
+
+Tapdeck started as a fork of Ryan Olf's [node-sonos-nfc](https://github.com/ryanolf/node-sonos-nfc), which itself traces back to hankhank10's [Sonos Vinyl Emulator](https://github.com/hankhank10/vinylemulator). Major thanks to both, and to the maintainers of the open-source PC/SC and ACR122U tooling.
+
+## License
+
+[MIT License](LICENSE).
