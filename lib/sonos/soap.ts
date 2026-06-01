@@ -57,12 +57,17 @@ export async function invoke(
     });
     const text = await res.text();
     if (!res.ok) {
-      throw new Error(`SOAP ${action} -> HTTP ${res.status}: ${text.slice(0, 300)}`);
+      throw new Error(
+        `SOAP ${action} -> HTTP ${res.status}: ${text.slice(0, 300)}`,
+      );
     }
     return text;
   } catch (err) {
     if (err instanceof Error && err.name === 'AbortError') {
-      throw new Error(`SOAP ${action} timed out after ${timeout}ms (${baseUrl}${path})`);
+      throw new Error(
+        `SOAP ${action} timed out after ${timeout}ms (${baseUrl}${path})`,
+        { cause: err },
+      );
     }
     throw err;
   } finally {

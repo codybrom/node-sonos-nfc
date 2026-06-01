@@ -9,8 +9,12 @@ const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 // Connect, retrying through the transient unpowered/unresponsive states that
 // a card passes through for a moment right after it lands on the reader.
-async function connectWithRetry(ctx: bigint, readerName: string): Promise<pcsc.Card> {
-  for (let i = 0; i < 60; i++) { // ~3.6s of power-up tolerance
+async function connectWithRetry(
+  ctx: bigint,
+  readerName: string,
+): Promise<pcsc.Card> {
+  for (let i = 0; i < 60; i++) {
+    // ~3.6s of power-up tolerance
     try {
       return await pcsc.connect(ctx, readerName);
     } catch (err) {
@@ -27,13 +31,19 @@ async function connectWithRetry(ctx: bigint, readerName: string): Promise<pcsc.C
 
 // Read the NTAG user memory (from page 4) via FF B0 read APDUs until we have a
 // complete NDEF message, the tag ends, or a cap is hit. Returns the text/uri.
-async function readTag(ctx: bigint, readerName: string): Promise<string | null> {
+async function readTag(
+  ctx: bigint,
+  readerName: string,
+): Promise<string | null> {
   const card = await connectWithRetry(ctx, readerName);
   try {
     const bytes: number[] = [];
     let page = 4;
     for (let chunk = 0; chunk < 64; chunk++) {
-      const resp = await pcsc.transmit(card, new Uint8Array([0xff, 0xb0, 0x00, page & 0xff, 0x10]));
+      const resp = await pcsc.transmit(
+        card,
+        new Uint8Array([0xff, 0xb0, 0x00, page & 0xff, 0x10]),
+      );
       if (resp.length < 2) break;
       const sw1 = resp[resp.length - 2];
       const data = resp.slice(0, resp.length - 2);
@@ -50,7 +60,9 @@ async function readTag(ctx: bigint, readerName: string): Promise<string | null> 
 }
 
 // Run the reader loop forever, invoking onTag(text) for each scanned card.
-export async function startReader(onTag: (text: string) => Promise<void> | void): Promise<void> {
+export async function startReader(
+  onTag: (text: string) => Promise<void> | void,
+): Promise<void> {
   const ctx = pcsc.establishContext();
   console.log(
     'Control your Sonos with NFC cards. Searching for PCSC-compatible NFC reader devices...',

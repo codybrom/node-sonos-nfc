@@ -11,7 +11,11 @@ Deno.test('buildEnvelope wraps the SOAP body', () => {
 
 Deno.test('buildBody namespaces the action and embeds args', () => {
   assertEquals(
-    buildBody(URN.AVTransport, 'Play', '<InstanceID>0</InstanceID><Speed>1</Speed>'),
+    buildBody(
+      URN.AVTransport,
+      'Play',
+      '<InstanceID>0</InstanceID><Speed>1</Speed>',
+    ),
     '<u:Play xmlns:u="urn:schemas-upnp-org:service:AVTransport:1">' +
       '<InstanceID>0</InstanceID><Speed>1</Speed></u:Play>',
   );
@@ -20,5 +24,8 @@ Deno.test('buildBody namespaces the action and embeds args', () => {
 Deno.test('control paths and URNs are the Sonos-expected values', () => {
   assertEquals(PATH.AVTransport, '/MediaRenderer/AVTransport/Control');
   assertEquals(PATH.ContentDirectory, '/MediaServer/ContentDirectory/Control');
-  assertEquals(URN.ContentDirectory, 'urn:schemas-upnp-org:service:ContentDirectory:1');
+  assertEquals(
+    URN.ContentDirectory,
+    'urn:schemas-upnp-org:service:ContentDirectory:1',
+  );
 });
