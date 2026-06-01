@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "tasks": {
-    "start": "deno run --allow-ffi --allow-net --allow-read --allow-env=PCSC_LIB index.ts",
-    "compile": "deno compile --allow-ffi --allow-net --allow-read --allow-env=PCSC_LIB -o tapdeck index.ts",
-    "test": "deno test --allow-read --allow-net",
+    "start": "deno run --allow-ffi --allow-net --allow-read --allow-write --allow-run=pm2 --allow-env=PCSC_LIB,HOME index.ts",
+    "compile": "deno compile --allow-ffi --allow-net --allow-read --allow-write --allow-run=pm2 --allow-env=PCSC_LIB,HOME -o tapdeck index.ts",
+    "test": "deno test --allow-read --allow-net --allow-env",
     "lint": "deno lint",
     "fmt": "deno fmt"
   },
@@ -21,6 +21,10 @@
     "proseWrap": "preserve"
   },
   "lint": {
-    "rules": { "tags": ["recommended"] }
+    "rules": {
+      "tags": [
+        "recommended"
+      ]
+    }
   }
 }

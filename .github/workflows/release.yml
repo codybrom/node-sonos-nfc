@@ -19,7 +19,7 @@ jobs:
           deno-version: v2.x
       - name: Compile binaries
         run: |
-          flags="--allow-ffi --allow-net --allow-read --allow-env=PCSC_LIB"
+          flags="--allow-ffi --allow-net --allow-read --allow-write --allow-run=pm2 --allow-env=PCSC_LIB,HOME"
           deno compile --target aarch64-unknown-linux-gnu $flags -o tapdeck-linux-arm64 index.ts
           deno compile --target x86_64-unknown-linux-gnu $flags -o tapdeck-linux-x86_64 index.ts
       - name: Publish release
